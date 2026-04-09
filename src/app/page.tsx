@@ -53,6 +53,31 @@ export default function HomePage() {
         />
       ))}
 
+      {prizes.length > 0 && (
+        <div className="w-full bg-white/60 rounded-2xl p-4 mt-2">
+          <h2 className="text-sm font-bold text-gray-500 mb-3">Prizes Won 🏆</h2>
+          <div className="flex flex-col gap-2">
+            {prizes.map((prize) => {
+              const child = children.find((c) => c.id === prize.child_id);
+              return (
+                <div key={prize.id} className="flex items-center gap-2 text-sm">
+                  <span>{child?.avatar_emoji}</span>
+                  <span className="font-medium text-gray-700">{child?.name}</span>
+                  <span className="text-gray-400">·</span>
+                  <span className="text-gray-500">
+                    {new Date(prize.redeemed_at).toLocaleDateString("en", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                  <span className="ml-auto">🎁</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <Link
         href="/parent"
         className="text-sm text-purple-400 hover:text-purple-600 transition-colors mt-4"

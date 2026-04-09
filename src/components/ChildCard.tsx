@@ -10,7 +10,6 @@ interface ChildCardProps {
   isParent?: boolean;
   todayStar?: Star | null;
   onToggleStar?: () => void;
-  onRedeemPrize?: () => void;
 }
 
 export default function ChildCard({
@@ -20,7 +19,6 @@ export default function ChildCard({
   isParent = false,
   todayStar,
   onToggleStar,
-  onRedeemPrize,
 }: ChildCardProps) {
   const [animateStar, setAnimateStar] = useState<number | null>(null);
   const totalStars = stars.length;
@@ -107,14 +105,6 @@ export default function ChildCard({
           >
             {todayStar ? "Remove ✕" : "Give Star ⭐"}
           </button>
-          {canRedeem && (
-            <button
-              onClick={onRedeemPrize}
-              className="flex-1 py-3 px-4 rounded-2xl font-bold text-lg bg-purple-500 text-white shadow-md hover:bg-purple-600 transition-all active:scale-95"
-            >
-              Award Prize 🎁
-            </button>
-          )}
         </div>
       )}
     </div>

@@ -39,10 +39,14 @@ export default function ParentPage() {
       supabase.from("stars").select("*").order("date", { ascending: false }),
       supabase.from("prizes").select("*").order("redeemed_at", { ascending: false }),
     ]);
-    setChildren(childRes.data ?? []);
-    setStars(starRes.data ?? []);
-    setPrizes(prizeRes.data ?? []);
+    const newChildren = childRes.data ?? [];
+    const newStars = starRes.data ?? [];
+    const newPrizes = prizeRes.data ?? [];
+    setChildren(newChildren);
+    setStars(newStars);
+    setPrizes(newPrizes);
     setLoading(false);
+    return { stars: newStars, prizes: newPrizes };
   }, []);
 
   useEffect(() => {
@@ -63,32 +67,31 @@ export default function ParentPage() {
     router.push("/");
   }
 
-  async function toggleStar(childId: string) {
-    const today = getToday();
+  async function toggleStar(childId: string, date: string) {
     const existing = stars.find(
-      (s) => s.child_id === childId && s.date === today
+      (s) => s.child_id === childId && s.date === date
     );
-
     if (existing) {
       await supabase.from("stars").delete().eq("id", existing.id);
+      await loadData();
     } else {
       await supabase.from("stars").insert({
         child_id: childId,
-        date: today,
+        date,
         awarded_by: user!.email,
       });
       fireStarConfetti();
+      const { stars: newStars, prizes: newPrizes } = await loadData();
+      // Auto-prize: if unredeemed stars hit 10, award automatically
+      const childStars = newStars.filter((s) => s.child_id === childId);
+      const childPrizes = newPrizes.filter((p) => p.child_id === childId);
+      const redeemed = childPrizes.reduce((sum, p) => sum + p.stars_redeemed, 0);
+      if (childStars.length - redeemed >= 10) {
+        await supabase.from("prizes").insert({ child_id: childId, stars_redeemed: 10 });
+        fireConfetti();
+        await loadData();
+      }
     }
-    await loadData();
-  }
-
-  async function redeemPrize(childId: string) {
-    await supabase.from("prizes").insert({
-      child_id: childId,
-      stars_redeemed: 10,
-    });
-    fireConfetti();
-    await loadData();
   }
 
   if (!authChecked) {
@@ -134,10 +137,10 @@ export default function ParentPage() {
 
   const today = getToday();
 
-  // Last 7 days for history
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
+  // 28-day grid (4 weeks), oldest→newest
+  const last28Days = Array.from({ length: 28 }, (_, i) => {
     const d = new Date();
-    d.setDate(d.getDate() - i);
+    d.setDate(d.getDate() - (27 - i));
     return d.toISOString().split("T")[0];
   });
 
@@ -168,26 +171,38 @@ export default function ParentPage() {
               prizes={childPrizes}
               isParent
               todayStar={todayStar}
-              onToggleStar={() => toggleStar(child.id)}
-              onRedeemPrize={() => redeemPrize(child.id)}
+              onToggleStar={() => toggleStar(child.id, today)}
             />
 
-            {/* 7-day history */}
+            {/* 28-day interactive history grid */}
             <div className="bg-white/60 rounded-2xl p-4">
-              <h3 className="text-sm font-bold text-gray-500 mb-2">
-                Last 7 days
+              <h3 className="text-sm font-bold text-gray-500 mb-3">
+                History (tap to edit)
               </h3>
-              <div className="flex gap-2 justify-between">
-                {last7Days.reverse().map((date) => {
+              <div className="grid grid-cols-7 gap-1">
+                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                  <div key={i} className="text-center text-xs text-gray-400 pb-1">
+                    {d}
+                  </div>
+                ))}
+                {last28Days.map((date) => {
                   const hasStar = childStars.some((s) => s.date === date);
-                  const dayLabel = new Date(date + "T12:00:00").toLocaleDateString("en", {
-                    weekday: "narrow",
-                  });
+                  const isFuture = date > today;
+                  const isToday = date === today;
                   return (
-                    <div key={date} className="flex flex-col items-center gap-1">
-                      <span className="text-xs text-gray-400">{dayLabel}</span>
-                      <span className="text-lg">{hasStar ? "⭐" : "·"}</span>
-                    </div>
+                    <button
+                      key={date}
+                      disabled={isFuture}
+                      onClick={() => toggleStar(child.id, date)}
+                      title={date}
+                      className={`flex items-center justify-center rounded-lg h-9 text-base transition-all active:scale-90
+                        ${isFuture ? "opacity-20 cursor-default" : "cursor-pointer hover:bg-purple-50"}
+                        ${isToday ? "ring-2 ring-purple-400" : ""}
+                        ${hasStar ? "bg-amber-100" : "bg-gray-50"}
+                      `}
+                    >
+                      {hasStar ? "⭐" : "·"}
+                    </button>
                   );
                 })}
               </div>
