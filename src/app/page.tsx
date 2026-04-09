@@ -1,0 +1,64 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import type { Child, Star, Prize } from "@/lib/types";
+import ChildCard from "@/components/ChildCard";
+
+export default function HomePage() {
+  const [children, setChildren] = useState<Child[]>([]);
+  const [stars, setStars] = useState<Star[]>([]);
+  const [prizes, setPrizes] = useState<Prize[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const [childRes, starRes, prizeRes] = await Promise.all([
+        supabase.from("children").select("*").order("created_at"),
+        supabase.from("stars").select("*").order("date", { ascending: false }),
+        supabase.from("prizes").select("*").order("redeemed_at", { ascending: false }),
+      ]);
+      setChildren(childRes.data ?? []);
+      setStars(starRes.data ?? []);
+      setPrizes(prizeRes.data ?? []);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-4xl animate-bounce">⭐</div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="flex-1 flex flex-col items-center px-4 py-8 gap-6 max-w-md mx-auto w-full">
+      <h1 className="text-3xl font-extrabold text-purple-600 text-center">
+        Table Stars ⭐
+      </h1>
+      <p className="text-gray-500 text-center -mt-2">
+        Eat nicely, earn stars, win prizes!
+      </p>
+
+      {children.map((child) => (
+        <ChildCard
+          key={child.id}
+          child={child}
+          stars={stars.filter((s) => s.child_id === child.id)}
+          prizes={prizes.filter((p) => p.child_id === child.id)}
+        />
+      ))}
+
+      <Link
+        href="/parent"
+        className="text-sm text-purple-400 hover:text-purple-600 transition-colors mt-4"
+      >
+        Parent Login →
+      </Link>
+    </main>
+  );
+}
