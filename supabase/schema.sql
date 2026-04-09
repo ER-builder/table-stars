@@ -48,7 +48,7 @@ create policy "Parents delete stars" on stars for delete
 create policy "Parents insert prizes" on prizes for insert
   with check (auth.jwt() ->> 'email' in ('elulrif@gmail.com', 'schwartzliron@gmail.com'));
 
--- Seed data - update names as needed
+-- Seed data
 insert into children (name, avatar_emoji) values
-  ('Child 1', '🦁'),
-  ('Child 2', '🦋');
+  ('Eitan', '🦁'),
+  ('Tamar', '🦋');
