@@ -92,19 +92,21 @@ export default function ChildCard({
       {/* Parent actions */}
       {isParent && (
         <div className="flex gap-3">
-          <button
-            onClick={() => {
-              if (!todayStar) setAnimateStar(currentProgress);
-              onToggleStar?.();
-            }}
-            className={`flex-1 py-3 px-4 rounded-2xl font-bold text-lg transition-all active:scale-95 ${
-              todayStar
-                ? "bg-red-100 text-red-600 border-2 border-red-200"
-                : "bg-warm-400 text-white shadow-md hover:bg-warm-500"
-            }`}
-          >
-            {todayStar ? "Remove ✕" : "Give Star ⭐"}
-          </button>
+          {todayStar ? (
+            <div className="flex-1 py-3 px-4 rounded-2xl font-bold text-lg text-center bg-gray-100 text-gray-400">
+              ✓ Given today
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setAnimateStar(currentProgress);
+                onToggleStar?.();
+              }}
+              className="flex-1 py-3 px-4 rounded-2xl font-bold text-lg bg-warm-400 text-white shadow-md hover:bg-warm-500 transition-all active:scale-95"
+            >
+              Give Star ⭐
+            </button>
+          )}
         </div>
       )}
     </div>
