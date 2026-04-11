@@ -1,39 +1,18 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { getDb } from "@/lib/db";
 import type { Child, Star, Prize } from "@/lib/types";
 import ChildCard from "@/components/ChildCard";
 
-export default function HomePage() {
-  const [children, setChildren] = useState<Child[]>([]);
-  const [stars, setStars] = useState<Star[]>([]);
-  const [prizes, setPrizes] = useState<Prize[]>([]);
-  const [loading, setLoading] = useState(true);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    async function load() {
-      const [childRes, starRes, prizeRes] = await Promise.all([
-        supabase.from("children").select("*").order("created_at"),
-        supabase.from("stars").select("*").order("date", { ascending: false }),
-        supabase.from("prizes").select("*").order("redeemed_at", { ascending: false }),
-      ]);
-      setChildren(childRes.data ?? []);
-      setStars(starRes.data ?? []);
-      setPrizes(prizeRes.data ?? []);
-      setLoading(false);
-    }
-    load();
-  }, []);
+export default async function HomePage() {
+  const sql = getDb();
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-4xl animate-bounce">⭐</div>
-      </div>
-    );
-  }
+  const [children, stars, prizes] = await Promise.all([
+    sql`SELECT * FROM children ORDER BY created_at` as unknown as Promise<Child[]>,
+    sql`SELECT * FROM stars ORDER BY date DESC` as unknown as Promise<Star[]>,
+    sql`SELECT * FROM prizes ORDER BY redeemed_at DESC` as unknown as Promise<Prize[]>,
+  ]);
 
   return (
     <main className="flex-1 flex flex-col items-center px-4 py-8 gap-6 max-w-md mx-auto w-full">
