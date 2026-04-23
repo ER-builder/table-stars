@@ -7,7 +7,11 @@ import ChildCard from "@/components/ChildCard";
 import { fireConfetti, fireStarConfetti } from "@/components/Confetti";
 
 function getToday() {
-  return new Date().toISOString().split("T")[0];
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 interface ParentDashboardProps {
@@ -30,11 +34,21 @@ export default function ParentDashboard({
   useEffect(() => setLocalStars(stars), [stars]);
   useEffect(() => setLocalPrizes(prizes), [prizes]);
 
-  // 28-day grid (4 weeks), oldest→newest
-  const last28Days = Array.from({ length: 28 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (27 - i));
-    return d.toISOString().split("T")[0];
+  // 4-week grid aligned to weekdays (Sun-Sat), ending on the week that contains today.
+  // Compute date strings in LOCAL time so "today" matches the user's calendar day.
+  function fmt(d: Date) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+  const todayDate = new Date();
+  const endOfWeek = new Date(todayDate);
+  endOfWeek.setDate(todayDate.getDate() + (6 - todayDate.getDay())); // Saturday of current week
+  const gridDays: string[] = Array.from({ length: 28 }, (_, i) => {
+    const d = new Date(endOfWeek);
+    d.setDate(endOfWeek.getDate() - (27 - i));
+    return fmt(d);
   });
 
   async function toggleStar(childId: string, date: string) {
@@ -110,23 +124,29 @@ export default function ParentDashboard({
                     {d}
                   </div>
                 ))}
-                {last28Days.map((date) => {
+                {gridDays.map((date) => {
                   const hasStar = childStars.some((s) => s.date === date);
                   const isFuture = date > today;
                   const isToday = date === today;
+                  const dayNum = parseInt(date.slice(8, 10), 10);
                   return (
                     <button
                       key={date}
                       disabled={isFuture}
                       onClick={() => toggleStar(child.id, date)}
                       title={date}
-                      className={`flex items-center justify-center rounded-lg h-9 text-base transition-all active:scale-90
+                      className={`relative flex flex-col items-center justify-center rounded-lg h-11 transition-all active:scale-90
                         ${isFuture ? "opacity-20 cursor-default" : "cursor-pointer hover:bg-purple-50"}
                         ${isToday ? "ring-2 ring-purple-400" : ""}
                         ${hasStar ? "bg-amber-100" : "bg-gray-50"}
                       `}
                     >
-                      {hasStar ? "⭐" : "·"}
+                      <span className={`text-[10px] leading-none ${hasStar ? "text-amber-700" : "text-gray-400"}`}>
+                        {dayNum}
+                      </span>
+                      <span className="text-base leading-none mt-0.5">
+                        {hasStar ? "⭐" : "·"}
+                      </span>
                     </button>
                   );
                 })}
