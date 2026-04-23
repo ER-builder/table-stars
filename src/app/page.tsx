@@ -10,7 +10,7 @@ export default async function HomePage() {
 
   const [children, stars, prizes] = await Promise.all([
     sql`SELECT * FROM children ORDER BY created_at` as unknown as Promise<Child[]>,
-    sql`SELECT * FROM stars ORDER BY date DESC` as unknown as Promise<Star[]>,
+    sql`SELECT id, child_id, date::text AS date, awarded_by, created_at FROM stars ORDER BY date DESC` as unknown as Promise<Star[]>,
     sql`SELECT * FROM prizes ORDER BY redeemed_at DESC` as unknown as Promise<Prize[]>,
   ]);
 

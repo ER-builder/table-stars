@@ -34,22 +34,29 @@ export default function ParentDashboard({
   useEffect(() => setLocalStars(stars), [stars]);
   useEffect(() => setLocalPrizes(prizes), [prizes]);
 
-  // 4-week grid aligned to weekdays (Sun-Sat), ending on the week that contains today.
-  // Compute date strings in LOCAL time so "today" matches the user's calendar day.
-  function fmt(d: Date) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+  function fmt(y: number, m: number, day: number) {
+    return `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
-  const todayDate = new Date();
-  const endOfWeek = new Date(todayDate);
-  endOfWeek.setDate(todayDate.getDate() + (6 - todayDate.getDay())); // Saturday of current week
-  const gridDays: string[] = Array.from({ length: 28 }, (_, i) => {
-    const d = new Date(endOfWeek);
-    d.setDate(endOfWeek.getDate() - (27 - i));
-    return fmt(d);
+  const now = new Date();
+  const [viewMonth, setViewMonth] = useState<{ year: number; month: number }>({
+    year: now.getFullYear(),
+    month: now.getMonth(),
   });
+  const monthLabel = new Date(viewMonth.year, viewMonth.month, 1).toLocaleDateString(
+    "en",
+    { month: "long", year: "numeric" },
+  );
+  const firstDayOfWeek = new Date(viewMonth.year, viewMonth.month, 1).getDay();
+  const daysInMonth = new Date(viewMonth.year, viewMonth.month + 1, 0).getDate();
+  const isCurrentMonth =
+    viewMonth.year === now.getFullYear() && viewMonth.month === now.getMonth();
+
+  function shiftMonth(delta: number) {
+    setViewMonth((prev) => {
+      const d = new Date(prev.year, prev.month + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+  }
 
   async function toggleStar(childId: string, date: string) {
     const existing = localStars.find(
@@ -113,39 +120,65 @@ export default function ParentDashboard({
               onToggleStar={() => toggleStar(child.id, today)}
             />
 
-            {/* 28-day interactive history grid */}
+            {/* Monthly history grid */}
             <div className="bg-white/60 rounded-2xl p-4">
-              <h3 className="text-sm font-bold text-gray-500 mb-3">
-                History (tap to edit)
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() => shiftMonth(-1)}
+                  className="px-3 py-1 rounded-lg text-purple-500 hover:bg-purple-50 active:scale-90"
+                  aria-label="Previous month"
+                >
+                  ‹
+                </button>
+                <h3 className="text-sm font-bold text-gray-600">{monthLabel}</h3>
+                <button
+                  onClick={() => shiftMonth(1)}
+                  disabled={isCurrentMonth}
+                  className={`px-3 py-1 rounded-lg active:scale-90 ${
+                    isCurrentMonth
+                      ? "text-gray-300 cursor-default"
+                      : "text-purple-500 hover:bg-purple-50"
+                  }`}
+                  aria-label="Next month"
+                >
+                  ›
+                </button>
+              </div>
               <div className="grid grid-cols-7 gap-1">
                 {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
                   <div key={i} className="text-center text-xs text-gray-400 pb-1">
                     {d}
                   </div>
                 ))}
-                {gridDays.map((date) => {
+                {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                  <div key={`pad-${i}`} className="h-12" />
+                ))}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((dayNum) => {
+                  const date = fmt(viewMonth.year, viewMonth.month, dayNum);
                   const hasStar = childStars.some((s) => s.date === date);
                   const isFuture = date > today;
                   const isToday = date === today;
-                  const dayNum = parseInt(date.slice(8, 10), 10);
                   return (
                     <button
                       key={date}
                       disabled={isFuture}
                       onClick={() => toggleStar(child.id, date)}
                       title={date}
-                      className={`relative flex flex-col items-center justify-center rounded-lg h-11 transition-all active:scale-90
+                      className={`relative flex flex-col items-center justify-center rounded-lg h-12 transition-all active:scale-90
                         ${isFuture ? "opacity-20 cursor-default" : "cursor-pointer hover:bg-purple-50"}
                         ${isToday ? "ring-2 ring-purple-400" : ""}
-                        ${hasStar ? "bg-amber-100" : "bg-gray-50"}
+                        ${hasStar ? "bg-amber-100 ring-1 ring-amber-300" : "bg-gray-50"}
                       `}
                     >
-                      <span className={`text-[10px] leading-none ${hasStar ? "text-amber-700" : "text-gray-400"}`}>
+                      <span
+                        className={`absolute top-0.5 right-1 text-[10px] leading-none ${
+                          hasStar ? "text-amber-700 font-semibold" : "text-gray-400"
+                        }`}
+                      >
                         {dayNum}
                       </span>
-                      <span className="text-base leading-none mt-0.5">
-                        {hasStar ? "⭐" : "·"}
+                      <span className="text-lg leading-none">
+                        {hasStar ? "⭐" : ""}
                       </span>
                     </button>
                   );
