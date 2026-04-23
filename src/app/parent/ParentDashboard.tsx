@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Child, Star, Prize } from "@/lib/types";
 import ChildCard from "@/components/ChildCard";
@@ -24,6 +24,12 @@ export default function ParentDashboard({
   const router = useRouter();
   const today = getToday();
 
+  const [localStars, setLocalStars] = useState<Star[]>(stars);
+  const [localPrizes, setLocalPrizes] = useState<Prize[]>(prizes);
+
+  useEffect(() => setLocalStars(stars), [stars]);
+  useEffect(() => setLocalPrizes(prizes), [prizes]);
+
   // 28-day grid (4 weeks), oldest→newest
   const last28Days = Array.from({ length: 28 }, (_, i) => {
     const d = new Date();
@@ -32,6 +38,25 @@ export default function ParentDashboard({
   });
 
   async function toggleStar(childId: string, date: string) {
+    const existing = localStars.find(
+      (s) => s.child_id === childId && s.date === date,
+    );
+    const willAdd = !existing;
+
+    // Optimistic update
+    if (willAdd) {
+      const optimistic: Star = {
+        id: `optimistic-${childId}-${date}`,
+        child_id: childId,
+        date,
+        awarded_by: "",
+        created_at: new Date().toISOString(),
+      } as Star;
+      setLocalStars((prev) => [...prev, optimistic]);
+    } else {
+      setLocalStars((prev) => prev.filter((s) => s.id !== existing!.id));
+    }
+
     const res = await fetch("/api/stars", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,7 +65,18 @@ export default function ParentDashboard({
     const data = await res.json();
     if (data.action === "added") {
       fireStarConfetti();
-      if (data.autoPrize) fireConfetti();
+      if (data.autoPrize) {
+        fireConfetti();
+        setLocalPrizes((prev) => [
+          ...prev,
+          {
+            id: `optimistic-prize-${childId}-${Date.now()}`,
+            child_id: childId,
+            stars_redeemed: 10,
+            redeemed_at: new Date().toISOString(),
+          } as Prize,
+        ]);
+      }
     }
     router.refresh();
   }
@@ -48,8 +84,8 @@ export default function ParentDashboard({
   return (
     <>
       {children.map((child) => {
-        const childStars = stars.filter((s) => s.child_id === child.id);
-        const childPrizes = prizes.filter((p) => p.child_id === child.id);
+        const childStars = localStars.filter((s) => s.child_id === child.id);
+        const childPrizes = localPrizes.filter((p) => p.child_id === child.id);
         const todayStar = childStars.find((s) => s.date === today) ?? null;
 
         return (
