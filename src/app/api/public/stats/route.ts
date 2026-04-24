@@ -9,16 +9,18 @@ export async function GET(req: NextRequest) {
   }
 
   const sql = getDb();
+  // Scalar subqueries, not JOINs — joining stars + prizes creates a cartesian
+  // product that multiplies SUM(stars_redeemed) by the star count.
   const rows = await sql`
-    SELECT c.id, c.name, c.avatar_emoji,
-      COUNT(DISTINCT s.id)::int AS total_stars,
-      COUNT(DISTINCT p.id)::int AS prize_count,
-      COALESCE(SUM(p.stars_redeemed), 0)::int AS redeemed,
-      MAX(s.created_at) AS last_earned_at
+    SELECT
+      c.id,
+      c.name,
+      c.avatar_emoji,
+      (SELECT COUNT(*)::int FROM stars WHERE child_id = c.id) AS total_stars,
+      (SELECT COUNT(*)::int FROM prizes WHERE child_id = c.id) AS prize_count,
+      (SELECT COALESCE(SUM(stars_redeemed), 0)::int FROM prizes WHERE child_id = c.id) AS redeemed,
+      (SELECT MAX(created_at) FROM stars WHERE child_id = c.id) AS last_earned_at
     FROM children c
-    LEFT JOIN stars s ON s.child_id = c.id
-    LEFT JOIN prizes p ON p.child_id = c.id
-    GROUP BY c.id, c.name, c.avatar_emoji
     ORDER BY c.created_at
   `;
 
