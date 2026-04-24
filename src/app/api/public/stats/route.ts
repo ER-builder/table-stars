@@ -39,6 +39,14 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     { kids },
-    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        // Keyed public endpoint — wildcard CORS is fine (data is non-sensitive
+        // summary info and the key already gates reads).
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET",
+      },
+    },
   );
 }
