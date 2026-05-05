@@ -24,18 +24,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return ALLOWED_EMAILS.includes(profile?.email ?? "");
     },
   },
-  logger: {
-    error(error) {
-      const cause = (error as { cause?: unknown }).cause;
-      console.error("[auth] error:", {
-        name: error.name,
-        message: error.message,
-        cause,
-        causeJson: (() => {
-          try { return JSON.stringify(cause, Object.getOwnPropertyNames(cause ?? {})); }
-          catch { return String(cause); }
-        })(),
-      });
-    },
-  },
 });
