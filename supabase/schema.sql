@@ -25,7 +25,8 @@ create table prizes (
   child_id uuid not null references children(id) on delete cascade,
   stars_redeemed int not null default 10,
   prize_name text,
-  redeemed_at timestamptz default now()
+  redeemed_at timestamptz default now(),
+  delivered_at timestamptz
 );
 
 -- RLS Policies

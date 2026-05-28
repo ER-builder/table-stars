@@ -19,4 +19,5 @@ export interface Prize {
   stars_redeemed: number;
   prize_name: string | null;
   redeemed_at: string;
+  delivered_at: string | null;
 }

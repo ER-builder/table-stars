@@ -11,7 +11,7 @@ export default async function HomePage() {
   const [children, stars, prizes] = await Promise.all([
     sql`SELECT * FROM children ORDER BY created_at` as unknown as Promise<Child[]>,
     sql`SELECT id, child_id, date::text AS date, awarded_by, created_at FROM stars ORDER BY date DESC` as unknown as Promise<Star[]>,
-    sql`SELECT * FROM prizes ORDER BY redeemed_at DESC` as unknown as Promise<Prize[]>,
+    sql`SELECT id, child_id, stars_redeemed, prize_name, redeemed_at, delivered_at FROM prizes ORDER BY redeemed_at DESC` as unknown as Promise<Prize[]>,
   ]);
 
   return (
@@ -38,6 +38,7 @@ export default async function HomePage() {
           <div className="flex flex-col gap-2">
             {prizes.map((prize) => {
               const child = children.find((c) => c.id === prize.child_id);
+              const pending = !prize.delivered_at;
               return (
                 <div key={prize.id} className="flex items-center gap-2 text-sm">
                   <span>{child?.avatar_emoji}</span>
@@ -49,7 +50,9 @@ export default async function HomePage() {
                       day: "numeric",
                     })}
                   </span>
-                  <span className="ml-auto">🎁</span>
+                  <span className="ml-auto" title={pending ? "Pending delivery" : "Delivered"}>
+                    {pending ? "⏳" : "🎁"}
+                  </span>
                 </div>
               );
             })}

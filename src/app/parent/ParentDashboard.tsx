@@ -94,10 +94,34 @@ export default function ParentDashboard({
             id: `optimistic-prize-${childId}-${Date.now()}`,
             child_id: childId,
             stars_redeemed: 10,
+            prize_name: null,
             redeemed_at: new Date().toISOString(),
+            delivered_at: null,
           } as Prize,
         ]);
       }
+    }
+    router.refresh();
+  }
+
+  async function deliverPrize(childId: string) {
+    const pending = localPrizes
+      .filter((p) => p.child_id === childId && !p.delivered_at)
+      .sort((a, b) => a.redeemed_at.localeCompare(b.redeemed_at))[0];
+    if (!pending) return;
+
+    const nowIso = new Date().toISOString();
+    setLocalPrizes((prev) =>
+      prev.map((p) => (p.id === pending.id ? { ...p, delivered_at: nowIso } : p)),
+    );
+
+    const res = await fetch(`/api/prizes/${pending.id}/deliver`, { method: "POST" });
+    if (!res.ok) {
+      // Roll back optimistic update on failure.
+      setLocalPrizes((prev) =>
+        prev.map((p) => (p.id === pending.id ? { ...p, delivered_at: null } : p)),
+      );
+      return;
     }
     router.refresh();
   }
@@ -118,6 +142,7 @@ export default function ParentDashboard({
               isParent
               todayStar={todayStar}
               onToggleStar={() => toggleStar(child.id, today)}
+              onDeliverPrize={() => deliverPrize(child.id)}
             />
 
             {/* Monthly history grid */}
